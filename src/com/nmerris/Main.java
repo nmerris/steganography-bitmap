@@ -87,6 +87,7 @@ public class Main {
                     System.out.println("number of planes, should be 1: " + numPlanes);
                     System.out.println("num bpp: " + bpp);
                     System.out.println("image data size in bytes: " + imageDataSize);
+//                    System.out.println("NEXT IMAGE should start at: " + (offset + offsetToImageDataStart + imageDataSize));
                     System.out.println();
 
 
