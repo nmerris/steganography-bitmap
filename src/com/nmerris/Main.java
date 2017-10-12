@@ -22,18 +22,17 @@ public class Main {
         System.out.println("Enter a FULL file path (like '/home/steg.bmp'): ");
         Path filePath = Paths.get(scanner.nextLine());
 
-        // create a directory for the output file(s)
-        String newDirectoryString = filePath.toFile().getName() + "_Output";
-        File directory = new File(newDirectoryString);
-        directory.mkdir();
+
 
         try {
-
             // convert the whole file into an array of bytes
             // NOTE: Files.readAllBytes will close the file for me, with or without errors
             byte[] data = Files.readAllBytes(filePath);
 
-
+            // create a directory for the output file(s)
+            String newDirectoryString = filePath.toFile().getName() + "_Output";
+            File directory = new File(newDirectoryString);
+            directory.mkdir();
 
             // wrap it in a little endian byte buffer to make it easier to get at specific byte chunks
             // NOTE: numbers are stored in little-endian format in bitmap headers, so least significant digit is first
@@ -45,11 +44,8 @@ public class Main {
             // ie [offset to start of image data] + [image data size] in bytes
             int calcuatedEndOfFile = bb.getInt(10) + bb.getInt(34);
 
-
-
-
             System.out.println("ALL VALUES ARE IN DECIMAL UNLESS OTHERWISE SPECIFIED");
-            System.out.println("number of bytes in file: " + data.length);
+            System.out.println("Number of bytes in file: " + data.length);
             System.out.println();
 
             // iterate through all bytes, checking for 'magic' bitmap signatures as we go
@@ -90,14 +86,14 @@ public class Main {
 //                    System.out.println("num bpp: " + bpp);
 //                    System.out.println("compression (0 for none): " + compression);
 //                    System.out.println("image data size in bytes: " + imageDataSize);
-                    System.out.println("bitmap file size calculated from it's header, in bytes: " + (offsetToImageDataStart + imageDataSize));
+                    System.out.println("Bitmap file size calculated from it's header, in bytes: " + (offsetToImageDataStart + imageDataSize));
 //                    System.out.println("num colors in image: " + numColorsInImage);
 //                    System.out.println("num important colors: " + numImportantColors);
 //                    System.out.println("THIS IMAGE should end at offset DEC: " + (offset + offsetToImageDataStart + imageDataSize));
 //                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%X", offset + offsetToImageDataStart + imageDataSize));
 
                     Path newFilePath = Paths.get(newDirectoryString + "/" + offset + ".bmp");
-                    System.out.println("file path of bitmap: " + newFilePath);
+                    System.out.println("File path of bitmap: " + newFilePath);
 //                    System.out.println("file path of bitmap: " + newDirectoryString + "/" + offset + ".bmp");
 
                     // write out the currently found bitmap file to disk
@@ -121,6 +117,12 @@ public class Main {
                 // one interesting thing you could do here is scan for common 'magic' signatures for various file types
                 try (FileOutputStream outputStream = new FileOutputStream(newDirectoryString + "/" + calcuatedEndOfFile + ".unknown")) {
                     outputStream.write(data, calcuatedEndOfFile, data.length - calcuatedEndOfFile);
+                    String md5Hash = DigestUtils.md5Hex(Files.readAllBytes(Paths.get(newDirectoryString + "/" + calcuatedEndOfFile + ".unknown")));
+                    System.out.println("Found suspicious data starting at offset DEC: " + calcuatedEndOfFile);
+                    System.out.println("Found suspicious data starting at offset HEX: " + String.format("%X", calcuatedEndOfFile));
+                    System.out.println("File size, in bytes: " + (data.length - calcuatedEndOfFile));
+                    System.out.println("File path: " + newDirectoryString + "/" + calcuatedEndOfFile + ".unknown");
+                    System.out.println("MD5 hash of file: " + md5Hash);
                 }
             }
 
