@@ -1,6 +1,6 @@
 package com.nmerris;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
@@ -19,64 +19,64 @@ public class Main {
         System.out.println("Enter a FULL file path: ");
         Path filePath = Paths.get(scanner.nextLine());
 
+        // create a directory for the output file(s)
+        String newDirectoryString = filePath.toFile().getName() + "_Output";
+        File directory = new File(newDirectoryString);
+        directory.mkdir();
+
         try {
+            // set this to true if we suspect additional bytes at the END of this file
+            boolean extraDataAtEnd = false;
+
             // convert the whole file into an array of bytes
+            // NOTE: Files.readAllBytes will close the file for me, with or without errors
             byte[] data = Files.readAllBytes(filePath);
 
             // wrap it in a little endian byte buffer to make it easier to get at specific byte chunks
             // NOTE: numbers are stored in little-endian format in bitmap headers, so least significant digit is first
             ByteBuffer bb = ByteBuffer.wrap(data);
-
-//            int numSignatures = 0;
-//
-//            for(int i = 0; i < data.length; i++) {
-//                if(data[i] == 0x42) {
-//                    numSignatures++;
-//                }
-//            }
-
-
+            // bitmap files are almost always in little endian format
             bb.order(ByteOrder.LITTLE_ENDIAN);
 
-            // get the width and height: width is 4 bytes, always starts at 18, height always starts at 22
 
-
-
-
-            System.out.println("number of bytes: " + data.length);
+            System.out.println("ALL VALUES ARE IN DECIMAL UNLESS OTHERWISE SPECIFIED");
+            System.out.println("number of bytes in file: " + data.length);
             System.out.println();
 
-
-
+            // iterate through all bytes, checking for 'magic' bitmap signatures as we go
+            // since the signature is only 2 hex digits, want to make it more likely to avoid false positives by
+            // also scanning for 0 at reserved header offset 6 and 8.. every valid bmp should have zeros both places
+            // NOTE: could still get false positives, but much less likely by also scanning for reserved bytes
+            // NTOE: all bitmaps start with 'BM' ASCII = 424D hex
             for(int i = 1; i < data.length; i++) {
-                if(data[i] == 0x4d && data[i - 1] == 0x42) {
+                if(data[i] == 0x4d && data[i - 1] == 0x42 && data[i + 5] == 0 && data[i + 7] == 0) {
                     // found a possible start of a bitmap file
 
                     // get the offset in bytes, from the beginning of the file
                     int offset = i - 1;
-                    System.out.println("Found possible bitmap file start at offset: " + offset);
+                    System.out.println("Found possible bitmap file start at offset DEC: " + offset);
+                    System.out.println(String.format("Found possible bitmap file start at offset HEX: %X", offset));
 
-//                    int width = bb.getInt(18);
-//                    int height = bb.getInt(22);
-//                    short signature = bb.getShort(0); // signature is always 4D42 hex = 19778 dec
-//                    int imageDataSize = bb.getInt(34);
-//                    int offsetToImageDataStart = bb.getInt(10);
-//                    short bpp = bb.getShort(28); // 1, 4, 8, 24 (16?)
-//                    short numPlanes = bb.getShort(26); // always 1
-//                    int sizeOfHeader = bb.getInt(14); // always 40
-//                    short reservedAtSix = bb.getShort(6); // always 0
-//                    short reservedAtEight = bb.getShort(8); // always 0
-
-                    int width = bb.getInt(offset + 18);
-                    int height = bb.getInt(offset + 22);
                     short signature = bb.getShort(offset); // signature is always 4D42 hex = 19778 dec
-                    int imageDataSize = bb.getInt(offset + 34);
-                    int offsetToImageDataStart = bb.getInt(offset + 10);
-                    short bpp = bb.getShort(offset + 28); // 1, 4, 8, 24 (16?)
-                    short numPlanes = bb.getShort(offset + 26); // always 1
-                    int sizeOfHeader = bb.getInt(offset + 14); // always 40
                     short reservedAtSix = bb.getShort(offset + 6); // always 0
                     short reservedAtEight = bb.getShort(offset + 8); // always 0
+                    int offsetToImageDataStart = bb.getInt(offset + 10);
+                    int sizeOfHeader = bb.getInt(offset + 14); // 12 for 2.x BMPs, 40 for 3.x, 108 for 4.x
+                    int width = bb.getInt(offset + 18); // in px
+                    int height = bb.getInt(offset + 22);// in px
+                    short numPlanes = bb.getShort(offset + 26); // always 1
+                    short bpp = bb.getShort(offset + 28); // 1, 4, 8, 24 (16?) NOTE: 16+ here means no color table
+                    int compression = bb.getInt(offset + 30); // 0 for none, 1 for RLE-8, 2 for RLE-4
+                    int imageDataSize = bb.getInt(offset + 34);
+                    int numColorsInImage = bb.getInt(offset + 46);
+                    int numImportantColors = bb.getInt(offset + 50);
+
+                    // set a flag if this bitmap's EOF is BEFORE the actual end of file
+                    // ie calculate the expected EOF for this bitmap, and if that is before the EOF according to the
+                    // number of bytes read in here in this app, then we want to make a note of this because that is suspicious!
+                    if(offset + offsetToImageDataStart + imageDataSize > data.length) {
+                        extraDataAtEnd = true;
+                    }
 
                     System.out.println("signature, should be 19778: " + signature);
                     System.out.println("reservedAtSix, should be 0: " + reservedAtSix);
@@ -86,14 +86,32 @@ public class Main {
                     System.out.println("width: " + width + ", height: " + height);
                     System.out.println("number of planes, should be 1: " + numPlanes);
                     System.out.println("num bpp: " + bpp);
+                    System.out.println("compression (0 for none): " + compression);
                     System.out.println("image data size in bytes: " + imageDataSize);
-//                    System.out.println("NEXT IMAGE should start at: " + (offset + offsetToImageDataStart + imageDataSize));
+                    System.out.println("num colors in image: " + numColorsInImage);
+                    System.out.println("num important colors: " + numImportantColors);
+                    System.out.println("THIS IMAGE should end at offset DEC: " + (offset + offsetToImageDataStart + imageDataSize));
+                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%X", offset + offsetToImageDataStart + imageDataSize));
                     System.out.println();
 
+                    // write out the current bitmap file to disk
+                    // try with resources will automatically close the file
+                    try (FileOutputStream outputStream = new FileOutputStream(newDirectoryString + "/" + offset + ".bmp")) {
+                        outputStream.write(data, offset, offsetToImageDataStart + imageDataSize);
+                    }
+
+                } // end scan for bitmap signatures
 
 
+                if(extraDataAtEnd) {
+                    // we could do more data processing here, but per requirements, I am just dumping the data to a file
+                    // one interesting thing you could do here is scan for common 'magic' signatures for various file types
+                    // TODO write to file
 
+//                    FileOutputStream stream = new FileOutputStream()
                 }
+
+
             }
 
 
