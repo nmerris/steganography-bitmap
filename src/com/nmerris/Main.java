@@ -1,5 +1,7 @@
 package com.nmerris;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -7,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Scanner;
+
 
 public class Main {
 
@@ -16,7 +19,7 @@ public class Main {
 
         // get the file path from the user
         // example file path: /home/nmerris/IdeaProjects/bitmap header reader/src/com/nmerris/steg.bmp
-        System.out.println("Enter a FULL file path: ");
+        System.out.println("Enter a FULL file path (like '/home/steg.bmp'): ");
         Path filePath = Paths.get(scanner.nextLine());
 
         // create a directory for the output file(s)
@@ -25,10 +28,6 @@ public class Main {
         directory.mkdir();
 
         try {
-            // set this to true if there are additional bytes at the END of the input bitmap file
-//            boolean extraDataAtEnd = false;
-            // the calculated end of the input bitmap file, according to it's header info
-//            long calculatedEndOfFile;
 
             // convert the whole file into an array of bytes
             // NOTE: Files.readAllBytes will close the file for me, with or without errors
@@ -57,7 +56,7 @@ public class Main {
             // since the signature is only 2 hex digits, want to make it more likely to avoid false positives by
             // also scanning for 0 at reserved header offset 6 and 8.. every valid bmp should have zeros both places
             // NOTE: could still get false positives, but much less likely by also scanning for reserved bytes
-            // NTOE: all bitmaps start with 'BM' ASCII = 424D hex
+            // NOTE: all bitmaps start with 'BM' ASCII = 424D hex
             for(int i = 1; i < data.length; i++) {
                 if(data[i] == 0x4d && data[i - 1] == 0x42 && data[i + 5] == 0 && data[i + 7] == 0) {
                     // found a possible start of a bitmap file
@@ -81,38 +80,42 @@ public class Main {
                     int numColorsInImage = bb.getInt(offset + 46);
                     int numImportantColors = bb.getInt(offset + 50);
 
-                    // set a flag if this bitmap's EOF is BEFORE the actual end of file
-                    // ie calculate the expected EOF for this bitmap, and if that is before the EOF according to the
-                    // number of bytes read in here in this app, then we want to make a note of this because that is suspicious!
-//                    if(offset + offsetToImageDataStart + imageDataSize > data.length) {
-//                        extraDataAtEnd = true;
-//                    }
+//                    System.out.println("signature, should be 19778: " + signature);
+//                    System.out.println("reservedAtSix, should be 0: " + reservedAtSix);
+//                    System.out.println("reservedAtEight, should be 0: " + reservedAtEight);
+//                    System.out.println("offset to start of image data: " + offsetToImageDataStart);
+//                    System.out.println("size of bitmap header, should be 40: " + sizeOfHeader);
+//                    System.out.println("width: " + width + ", height: " + height);
+//                    System.out.println("number of planes, should be 1: " + numPlanes);
+//                    System.out.println("num bpp: " + bpp);
+//                    System.out.println("compression (0 for none): " + compression);
+//                    System.out.println("image data size in bytes: " + imageDataSize);
+                    System.out.println("bitmap file size calculated from it's header, in bytes: " + (offsetToImageDataStart + imageDataSize));
+//                    System.out.println("num colors in image: " + numColorsInImage);
+//                    System.out.println("num important colors: " + numImportantColors);
+//                    System.out.println("THIS IMAGE should end at offset DEC: " + (offset + offsetToImageDataStart + imageDataSize));
+//                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%X", offset + offsetToImageDataStart + imageDataSize));
 
-                    System.out.println("signature, should be 19778: " + signature);
-                    System.out.println("reservedAtSix, should be 0: " + reservedAtSix);
-                    System.out.println("reservedAtEight, should be 0: " + reservedAtEight);
-                    System.out.println("offset to start of image data: " + offsetToImageDataStart);
-                    System.out.println("size of bitmap header, should be 40: " + sizeOfHeader);
-                    System.out.println("width: " + width + ", height: " + height);
-                    System.out.println("number of planes, should be 1: " + numPlanes);
-                    System.out.println("num bpp: " + bpp);
-                    System.out.println("compression (0 for none): " + compression);
-                    System.out.println("image data size in bytes: " + imageDataSize);
-                    System.out.println("num colors in image: " + numColorsInImage);
-                    System.out.println("num important colors: " + numImportantColors);
-                    System.out.println("THIS IMAGE should end at offset DEC: " + (offset + offsetToImageDataStart + imageDataSize));
-                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%X", offset + offsetToImageDataStart + imageDataSize));
-                    System.out.println();
+                    Path newFilePath = Paths.get(newDirectoryString + "/" + offset + ".bmp");
+                    System.out.println("file path of bitmap: " + newFilePath);
+//                    System.out.println("file path of bitmap: " + newDirectoryString + "/" + offset + ".bmp");
 
                     // write out the currently found bitmap file to disk
+                    // and print out it's MD5 hash to the console
                     try (FileOutputStream outputStream = new FileOutputStream(newDirectoryString + "/" + offset + ".bmp")) {
                         outputStream.write(data, offset, offsetToImageDataStart + imageDataSize);
+                        String md5Hash = DigestUtils.md5Hex(Files.readAllBytes(newFilePath));
+                        System.out.println("MD5 hash of file: " + md5Hash);
                     }
+
+                    System.out.println();
 
                 }
             } // end for iteration through all bytes of input bitmap
 
 
+            // if the file being processed is larger than the bitmap header indicates it should be,
+            // dump the remaining bytes into a new file
             if(data.length > calcuatedEndOfFile) {
                 // we could do more data processing here, but per requirements, I am just dumping the data to a file
                 // one interesting thing you could do here is scan for common 'magic' signatures for various file types
