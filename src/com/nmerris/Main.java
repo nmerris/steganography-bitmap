@@ -25,18 +25,28 @@ public class Main {
         directory.mkdir();
 
         try {
-            // set this to true if we suspect additional bytes at the END of this file
-            boolean extraDataAtEnd = false;
+            // set this to true if there are additional bytes at the END of the input bitmap file
+//            boolean extraDataAtEnd = false;
+            // the calculated end of the input bitmap file, according to it's header info
+//            long calculatedEndOfFile;
 
             // convert the whole file into an array of bytes
             // NOTE: Files.readAllBytes will close the file for me, with or without errors
             byte[] data = Files.readAllBytes(filePath);
+
+
 
             // wrap it in a little endian byte buffer to make it easier to get at specific byte chunks
             // NOTE: numbers are stored in little-endian format in bitmap headers, so least significant digit is first
             ByteBuffer bb = ByteBuffer.wrap(data);
             // bitmap files are almost always in little endian format
             bb.order(ByteOrder.LITTLE_ENDIAN);
+
+            // calculate the end of this bitmap file using it's header info
+            // ie [offset to start of image data] + [image data size] in bytes
+            int calcuatedEndOfFile = bb.getInt(10) + bb.getInt(34);
+
+
 
 
             System.out.println("ALL VALUES ARE IN DECIMAL UNLESS OTHERWISE SPECIFIED");
@@ -74,9 +84,9 @@ public class Main {
                     // set a flag if this bitmap's EOF is BEFORE the actual end of file
                     // ie calculate the expected EOF for this bitmap, and if that is before the EOF according to the
                     // number of bytes read in here in this app, then we want to make a note of this because that is suspicious!
-                    if(offset + offsetToImageDataStart + imageDataSize > data.length) {
-                        extraDataAtEnd = true;
-                    }
+//                    if(offset + offsetToImageDataStart + imageDataSize > data.length) {
+//                        extraDataAtEnd = true;
+//                    }
 
                     System.out.println("signature, should be 19778: " + signature);
                     System.out.println("reservedAtSix, should be 0: " + reservedAtSix);
@@ -94,27 +104,22 @@ public class Main {
                     System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%X", offset + offsetToImageDataStart + imageDataSize));
                     System.out.println();
 
-                    // write out the current bitmap file to disk
-                    // try with resources will automatically close the file
+                    // write out the currently found bitmap file to disk
                     try (FileOutputStream outputStream = new FileOutputStream(newDirectoryString + "/" + offset + ".bmp")) {
                         outputStream.write(data, offset, offsetToImageDataStart + imageDataSize);
                     }
 
-                } // end scan for bitmap signatures
-
-
-                if(extraDataAtEnd) {
-                    // we could do more data processing here, but per requirements, I am just dumping the data to a file
-                    // one interesting thing you could do here is scan for common 'magic' signatures for various file types
-                    // TODO write to file
-
-//                    FileOutputStream stream = new FileOutputStream()
                 }
+            } // end for iteration through all bytes of input bitmap
 
 
+            if(data.length > calcuatedEndOfFile) {
+                // we could do more data processing here, but per requirements, I am just dumping the data to a file
+                // one interesting thing you could do here is scan for common 'magic' signatures for various file types
+                try (FileOutputStream outputStream = new FileOutputStream(newDirectoryString + "/" + calcuatedEndOfFile + ".unknown")) {
+                    outputStream.write(data, calcuatedEndOfFile, data.length - calcuatedEndOfFile);
+                }
             }
-
-
 
 
         } catch (IOException e) {
