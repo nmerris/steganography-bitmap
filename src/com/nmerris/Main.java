@@ -60,7 +60,7 @@ public class Main {
                     // get the offset in bytes, from the beginning of the file
                     int offset = i - 1;
                     System.out.println("Found possible bitmap file start at offset DEC: " + offset);
-                    System.out.println(String.format("Found possible bitmap file start at offset HEX: %X", offset));
+                    System.out.println(String.format("Found possible bitmap file start at offset HEX: %x", offset));
 
                     short signature = bb.getShort(offset); // signature is always 4D42 hex = 19778 dec
                     short reservedAtSix = bb.getShort(offset + 6); // always 0
@@ -90,7 +90,7 @@ public class Main {
 //                    System.out.println("num colors in image: " + numColorsInImage);
 //                    System.out.println("num important colors: " + numImportantColors);
 //                    System.out.println("THIS IMAGE should end at offset DEC: " + (offset + offsetToImageDataStart + imageDataSize));
-//                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%X", offset + offsetToImageDataStart + imageDataSize));
+//                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%x", offset + offsetToImageDataStart + imageDataSize));
 
                     Path newFilePath = Paths.get(newDirectoryString + "/" + offset + ".bmp");
                     System.out.println("File path of bitmap: " + newFilePath);
@@ -119,7 +119,7 @@ public class Main {
                     outputStream.write(data, calcuatedEndOfFile, data.length - calcuatedEndOfFile);
                     String md5Hash = DigestUtils.md5Hex(Files.readAllBytes(Paths.get(newDirectoryString + "/" + calcuatedEndOfFile + ".unknown")));
                     System.out.println("Found suspicious data starting at offset DEC: " + calcuatedEndOfFile);
-                    System.out.println("Found suspicious data starting at offset HEX: " + String.format("%X", calcuatedEndOfFile));
+                    System.out.println("Found suspicious data starting at offset HEX: " + String.format("%x", calcuatedEndOfFile));
                     System.out.println("File size, in bytes: " + (data.length - calcuatedEndOfFile));
                     System.out.println("File path: " + newDirectoryString + "/" + calcuatedEndOfFile + ".unknown");
                     System.out.println("MD5 hash of file: " + md5Hash);
