@@ -13,6 +13,14 @@ import java.util.Scanner;
 // author: Nathan Merris
 public class Main {
 
+    /**
+     *  This program asks the user to enter a file path to a bitmap file.
+     *  The file is read in, and analyzed to detect hidden bitmap files, and other hidden blocks of data.
+     *  Each file is saved to a new subdirectory that is created in the folder in which this program is running.
+     *  Information about each file is displayed to the console as the program runs.
+     *  Bitmap files are detected based on their signature in their header.  Other files are not analyzed: they are
+     *  simply saved as-is with the file extension .unknown.
+     */
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
@@ -60,35 +68,10 @@ public class Main {
                     System.out.println("Found possible bitmap file start at offset DEC: " + offset);
                     System.out.println(String.format("Found possible bitmap file start at offset HEX: %x", offset));
 
-                    short signature = bb.getShort(offset); // signature is always 4D42 hex = 19778 dec
-                    short reservedAtSix = bb.getShort(offset + 6); // always 0
-                    short reservedAtEight = bb.getShort(offset + 8); // always 0
                     int offsetToImageDataStart = bb.getInt(offset + 10);
-                    int sizeOfHeader = bb.getInt(offset + 14); // 12 for 2.x BMPs, 40 for 3.x, 108 for 4.x
-                    int width = bb.getInt(offset + 18); // in px
-                    int height = bb.getInt(offset + 22);// in px
-                    short numPlanes = bb.getShort(offset + 26); // always 1
-                    short bpp = bb.getShort(offset + 28); // 1, 4, 8, 24 (16?) NOTE: 16+ here means no color table
-                    int compression = bb.getInt(offset + 30); // 0 for none, 1 for RLE-8, 2 for RLE-4
                     int imageDataSize = bb.getInt(offset + 34);
-                    int numColorsInImage = bb.getInt(offset + 46);
-                    int numImportantColors = bb.getInt(offset + 50);
 
-//                    System.out.println("signature, should be 19778: " + signature);
-//                    System.out.println("reservedAtSix, should be 0: " + reservedAtSix);
-//                    System.out.println("reservedAtEight, should be 0: " + reservedAtEight);
-//                    System.out.println("offset to start of image data: " + offsetToImageDataStart);
-//                    System.out.println("size of bitmap header, should be 40: " + sizeOfHeader);
-//                    System.out.println("width: " + width + ", height: " + height);
-//                    System.out.println("number of planes, should be 1: " + numPlanes);
-//                    System.out.println("num bpp: " + bpp);
-//                    System.out.println("compression (0 for none): " + compression);
-//                    System.out.println("image data size in bytes: " + imageDataSize);
                     System.out.println("Bitmap file size calculated from it's header, in bytes: " + (offsetToImageDataStart + imageDataSize));
-//                    System.out.println("num colors in image: " + numColorsInImage);
-//                    System.out.println("num important colors: " + numImportantColors);
-//                    System.out.println("THIS IMAGE should end at offset DEC: " + (offset + offsetToImageDataStart + imageDataSize));
-//                    System.out.println("THIS IMAGE should end at offset HEX: " + String.format("%x", offset + offsetToImageDataStart + imageDataSize));
 
                     Path newFilePath = Paths.get(newDirectoryString + "/" + offset + ".bmp");
                     System.out.println("File path of bitmap: " + newFilePath);
@@ -128,5 +111,7 @@ public class Main {
         } catch (IOException e) {
             System.out.println("That file path did not work, please try again.");
         }
-    }
+
+    } // main
+
 }
