@@ -14,6 +14,10 @@ import java.util.Scanner;
 public class Main {
 
     /**
+     * YOU MUST INCLUDE the apache commons codec library to run this program
+     * here is one good place to get it:
+     * https://mvnrepository.com/artifact/commons-codec/commons-codec/1.10
+     *
      *  This program asks the user to enter a file path to a bitmap file.
      *  The file is read in, and analyzed to detect hidden bitmap files, and other hidden blocks of data.
      *  Each file is saved to a new subdirectory that is created in the folder in which this program is running.
