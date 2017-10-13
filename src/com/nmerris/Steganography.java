@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 import java.util.Scanner;
 
 // author: Nathan Merris
-public class Main {
+public class Steganography {
 
     /**
      * YOU MUST INCLUDE the apache commons codec library to run this program
