@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Scanner;
 
-
+// author: Nathan Merris
 public class Main {
 
     public static void main(String[] args) {
@@ -21,8 +21,6 @@ public class Main {
         // example file path: /home/nmerris/IdeaProjects/bitmap header reader/src/com/nmerris/steg.bmp
         System.out.println("Enter a FULL file path (like '/home/steg.bmp'): ");
         Path filePath = Paths.get(scanner.nextLine());
-
-
 
         try {
             // convert the whole file into an array of bytes
